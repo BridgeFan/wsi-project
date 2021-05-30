@@ -1,14 +1,26 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import math
 import random
+from itertools import cycle
 
 import game
 from game import GameState, Player
 
 c = math.sqrt(2)
+
+
+def create_random_move(state: GameState) -> GameState:
+    player_order = cycle(GameState.PLAYER_ORDER)
+    if state.is_finished():
+        return state
+    current_player = next(player_order)
+    possible_moves = state.possible_moves(current_player)
+    moves_number = len(possible_moves)
+    if moves_number > 0:
+        move_x, move_y = possible_moves[random.randint(0, moves_number - 1)]
+        state = state.make_move(current_player, move_x, move_y)
+    else:
+        state = state.pass_move(current_player)
+    return state
 
 
 class Node:
@@ -23,9 +35,10 @@ class Node:
         wins = {0, 0, 0}
         simuls = 0
         game.state = state
+        children = []
 
     def is_leaf(self) -> bool:
-        return self.children.len == 0
+        return len(self.children) == 0
 
     def add_win(self, winner):
         if winner == Player.BLACK:
@@ -36,8 +49,8 @@ class Node:
             self.wins[2] += 1
         self.simuls += 1
 
-    def add_child(self, state=GameState()):
-        node = Node(state)
+    def add_child(self):
+        node = Node(create_random_move(self.state))
         node.parent = self
         self.children.append(node)
 
@@ -45,8 +58,16 @@ class Node:
         return self.wins / self.simuls + c * math.sqrt(math.log(self.parent.simuls) / self.simuls)
 
     def simulate(self) -> Player:
-        return random.choice(Player)
-        # returns winner_id (TODO)
+        player_order = cycle(GameState.PLAYER_ORDER)
+        state = self.state
+        for _ in range(4000):
+            state = create_random_move(state)
+        ret = Player.BLACK
+        if state.evaluate_end_game(Player.WHITE) > state.evaluate_end_game(ret):
+            ret = Player.WHITE
+        if state.evaluate_end_game(Player.RED) > state.evaluate_end_game(ret):
+            ret = Player.RED
+        return ret
 
 
 def choose_node(node) -> Node:
@@ -74,9 +95,9 @@ def make_turn(root, n):  # n - number of simulations
     pass
 
 
-def main():
+if __name__ == '__main__':
     root = Node()
     print('Hello')
-    for i in (0, 1000):
+    for _ in (0, 1000):
         make_turn(root, 10)
     print(root.wins)
